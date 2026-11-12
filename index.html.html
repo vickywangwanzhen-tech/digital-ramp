@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramp Launch · Golf Ball · Real-time Velocity Components</title>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+  body {
+    background: linear-gradient(145deg, #1b2b3f 0%, #0f1a26 100%);
+    min-height: 100vh; display: flex; justify-content: center; align-items: center;
+    margin: 0; padding: 20px;
+  }
+  .card {
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(8px);
+    border-radius: 2rem; box-shadow: 0 25px 40px -10px rgba(0,0,0,0.6);
+    padding: 1.8rem 2rem 2rem 2rem; border: 1px solid rgba(255,255,255,0.15);
+    max-width: 1300px; width: fit-content;
+  }
+  h1 {
+    margin: 0 0 0.25rem 0; font-weight: 500; font-size: 1.8rem;
+    color: #e1e9f0; text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  h1 span {
+    font-size: 0.95rem; background: #3e5b7c; padding: 0.2rem 1rem;
+    border-radius: 40px; font-weight: 400; color: #bdd3e8; border: 1px solid #5a7a9c;
+  }
+  .subhead {
+    color: #a0b8cf; margin: 0 0 1rem 0; font-size: 0.95rem;
+    border-left: 3px solid #3d9cd6; padding-left: 1rem; font-style: italic;
+  }
+  .canvas-wrapper {
+    position: relative; display: flex; justify-content: center;
+    background: #0b1219; border-radius: 1.8rem; padding: 0.6rem;
+    box-shadow: inset 0 5px 8px rgba(0,0,0,0.7), 0 10px 20px -5px black;
+    border: 1px solid #2b4257;
+  }
+  canvas {
+    display: block; width: 100%; height: auto; border-radius: 1.4rem;
+    background: radial-gradient(circle at 30% 30%, #1a2d3e, #0b141e);
+  }
+  .controls {
+    margin-top: 1.4rem; display: grid;
+    grid-template-columns: repeat(4, 1fr); gap: 1rem 1.5rem; align-items: center;
+  }
+  .slider-container { display: flex; flex-direction: column; gap: 0.15rem; }
+  .slider-container label {
+    display: flex; justify-content: space-between; font-size: 0.88rem;
+    color: #b6d0e8; letter-spacing: 0.2px; text-shadow: 0 1px 2px black;
+  }
+  .slider-container label span {
+    color: #8ec9ff; font-weight: 600; background: #132433;
+    padding: 0.1rem 0.7rem; border-radius: 40px; font-size: 0.82rem;
+    border: 1px solid #2e4c68;
+  }
+  input[type=range] {
+    width: 100%; height: 6px; border-radius: 10px; background: #203444;
+    -webkit-appearance: none; appearance: none; outline: none; margin: 0.35rem 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: #5eb0f0; border: 2px solid white;
+    box-shadow: 0 0 8px #00a6ff; cursor: pointer; transition: 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    background: #7fc4ff; transform: scale(1.15);
+  }
+  .toggle-container {
+    display: flex; align-items: center; gap: 0.8rem;
+    background: rgba(0,0,0,0.3); padding: 0.4rem 1rem; border-radius: 40px;
+    border: 1px solid #2d4b65; justify-content: center;
+  }
+  .toggle-container label {
+    color: #b6d0e8; font-size: 0.9rem; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .toggle-container input[type=checkbox] {
+    appearance: none; width: 40px; height: 22px; background: #203444;
+    border-radius: 20px; position: relative; cursor: pointer; outline: none;
+    border: 1px solid #3a5a78; transition: 0.2s;
+  }
+  .toggle-container input[type=checkbox]::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #6b8da8; border-radius: 50%; transition: 0.2s;
+  }
+  .toggle-container input[type=checkbox]:checked {
+    background: #1e4d6b;
+  }
+  .toggle-container input[type=checkbox]:checked::after {
+    left: 20px; background: #5eb0f0; box-shadow: 0 0 8px #00a6ff;
+  }
+  .stats {
+    grid-column: 1 / -1; display: flex; justify-content: space-around;
+    flex-wrap: wrap; gap: 0.6rem 1.5rem; background: rgba(0,0,0,0.35);
+    border-radius: 60px; padding: 0.8rem 1.5rem; margin-top: 0.3rem;
+    border: 1px solid #2d4b65; backdrop-filter: blur(5px);
+  }
+  .stat-item { display: flex; align-items: baseline; gap: 0.35rem; color: #9fb7d0; font-size: 0.92rem; }
+  .stat-item .value {
+    font-weight: 700; font-size: 1.3rem; color: #c3e2ff;
+    text-shadow: 0 0 8px #2f8fd0; letter-spacing: -0.5px;
+  }
+  .stat-item .unit { font-size: 0.72rem; color: #7a99b5; margin-left: 0.05rem; }
+  .note {
+    grid-column: 1 / -1; text-align: center; color: #7d9bb8;
+    font-size: 0.8rem; margin-top: 0.1rem; border-top: 1px dashed #2b4a62; padding-top: 0.7rem;
+  }
+  .badge {
+    color: #ffd966; font-weight: 600; background: #2c3e4e;
+    padding: 0.1rem 0.6rem; border-radius: 20px; font-size: 0.78rem;
+  }
+  .live-indicator {
+    display: inline-block; width: 8px; height: 8px; background: #5eff5e;
+    border-radius: 50%; margin-right: 4px; animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🛝 Ramp Launch · Golf Ball <span>42mm · Real-time Velocity</span></h1>
+  <div class="subhead">Ball released from ramp → slides down → launches at exit angle → flies (velocity vectors update live) → lands</div>
+
+  <div class="canvas-wrapper">
+    <canvas id="trajectoryCanvas" width="1100" height="560"></canvas>
+  </div>
+
+  <div class="controls">
+    <div class="slider-container">
+      <label>📏 Ramp Length (along incline) <span id="lengthVal">0.80 m</span></label>
+      <input type="range" id="lengthSlider" min="0.50" max="1.00" value="0.80" step="0.01">
+    </div>
+    <div class="slider-container">
+      <label>⛰️ Ramp Angle (incline) <span id="slopeVal">30°</span></label>
+      <input type="range" id="slopeSlider" min="5" max="75" value="30" step="1">
+    </div>
+    <div class="slider-container">
+      <label>📐 Exit Angle (from horizontal) <span id="incidentVal">20°</span></label>
+      <input type="range" id="incidentSlider" min="0" max="60" value="20" step="1">
+    </div>
+    <div class="slider-container">
+      <label>🏗️ Exit Height above Ground <span id="platformVal">0.80 m</span></label>
+      <input type="range" id="platformSlider" min="0" max="2.50" value="0.80" step="0.05">
+    </div>
+
+    <div class="toggle-container" style="grid-column: span 2;">
+      <label>
+        <input type="checkbox" id="physicsToggle"> 
+        <span>Enable Friction + Air Drag (unchecked = ignore)</span>
+      </label>
+    </div>
+
+    <div class="stats">
+      <div class="stat-item"><span class="live-indicator"></span>🎯 Live Speed <span class="value" id="speedVal">0.00</span><span class="unit">m/s</span></div>
+      <div class="stat-item">➡️ Live vx <span class="value" id="vxVal">0.00</span><span class="unit">m/s</span></div>
+      <div class="stat-item">⬆️ Live vy <span class="value" id="vyVal">0.00</span><span class="unit">m/s</span></div>
+      <div class="stat-item">📏 Range <span class="value" id="rangeVal">0.00</span><span class="unit">m</span></div>
+      <div class="stat-item">📈 Max Height <span class="value" id="maxHeightVal">0.00</span><span class="unit">m</span></div>
+    </div>
+    <div class="note">
+      <span class="badge">💡 Physics Model</span> 42mm golf ball (mass 45.9g, radius 21mm, Cd≈0.25).
+      With friction enabled: ramp μ=0.15, air drag F=½ρCdAv².
+      <span style="color:#8ec9ff;">Range limited to 2m — trajectory truncated at x=2m.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('trajectoryCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // ===== Physical constants =====
+  const g = 9.8;
+  const BALL_RADIUS = 0.021;
+  const BALL_MASS = 0.0459;
+  const BALL_AREA = Math.PI * BALL_RADIUS * BALL_RADIUS;
+  const AIR_DENSITY = 1.225;
+  const DRAG_COEFF = 0.25;
+  const FRICTION_COEFF = 0.15;
+
+  // ===== Range limit: X-axis 0~2m =====
+  const X_LIMIT = 2.0;
+
+  // ===== DOM =====
+  const lengthSlider = document.getElementById('lengthSlider');
+  const slopeSlider = document.getElementById('slopeSlider');
+  const incidentSlider = document.getElementById('incidentSlider');
+  const platformSlider = document.getElementById('platformSlider');
+  const physicsToggle = document.getElementById('physicsToggle');
+
+  const lengthVal = document.getElementById('lengthVal');
+  const slopeVal = document.getElementById('slopeVal');
+  const incidentVal = document.getElementById('incidentVal');
+  const platformVal = document.getElementById('platformVal');
+
+  const speedVal = document.getElementById('speedVal');
+  const vxVal = document.getElementById('vxVal');
+  const vyVal = document.getElementById('vyVal');
+  const rangeVal = document.getElementById('rangeVal');
+  const maxHeightVal = document.getElementById('maxHeightVal');
+
+  // ===== Canvas layout =====
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const padLeft = 80, padRight = 60, padTop = 50, padBottom = 70;
+
+  let scaleX, scaleY, originX, originY;
+
+  // Animation state
+  let animProgress = 0;
+  let animPhase = 'idle';
+  let lastTimestamp = 0;
+  let animationId = null;
+
+  let currentParams = null;
+  let slidePath = [];
+  let flightPath = [];
+  let landingPoint = {x:0, y:0};
+  let launchState = null;
+  let maxFlightHeight = 0;
+
+  // Live velocity for panel display
+  let liveVx = 0, liveVy = 0, liveSpeed = 0;
+
+  function getParams() {
+    const L = parseFloat(lengthSlider.value);
+    const slopeDeg = parseFloat(slopeSlider.value);
+    const incidentDeg = parseFloat(incidentSlider.value);
+    const platformH = parseFloat(platformSlider.value);
+    const withResistance = physicsToggle.checked;
+
+    const slopeRad = slopeDeg * Math.PI / 180;
+    const incidentRad = incidentDeg * Math.PI / 180;
+
+    const launchX = 0;
+    const launchY = platformH;
+
+    const slopeStartX = launchX - L * Math.cos(slopeRad);
+    const slopeStartY = launchY + L * Math.sin(slopeRad);
+
+    let v0 = 0;
+    if (withResistance) {
+      const a = g * (Math.sin(slopeRad) - FRICTION_COEFF * Math.cos(slopeRad));
+      if (a > 0) v0 = Math.sqrt(2 * a * L);
+    } else {
+      v0 = Math.sqrt(2 * g * Math.sin(slopeRad) * L);
+    }
+
+    const launchAngle = incidentRad;
+    const vx = v0 * Math.cos(launchAngle);
+    const vy = v0 * Math.sin(launchAngle);
+
+    return {
+      L, slopeDeg, incidentDeg, platformH, withResistance,
+      slopeRad, incidentRad, launchAngle,
+      v0, vx, vy, launchX, launchY,
+      slopeStartX, slopeStartY
+    };
+  }
+
+  function worldToCanvas(x, y) {
+    return {
+      x: originX + x * scaleX,
+      y: originY - y * scaleY
+    };
+  }
+
+  // ===== Compute trajectory with live velocity =====
+  function computeTrajectory() {
+    const p = getParams();
+    currentParams = p;
+
+    // Slide path (velocity increases from 0, not shown in panel)
+    slidePath = [];
+    const slideSteps = 40;
+    for (let i = 0; i <= slideSteps; i++) {
+      const t = i / slideSteps;
+      const x = p.slopeStartX + (p.launchX - p.slopeStartX) * t;
+      const y = p.slopeStartY + (p.launchY - p.slopeStartY) * t;
+      slidePath.push({x, y});
+    }
+
+    // Flight path: numerical integration, store velocity at each sample
+    flightPath = [];
+    let maxY = p.launchY;
+    let maxX = p.launchX;
+
+    if (p.v0 < 0.01) {
+      flightPath.push({x: p.launchX, y: p.launchY, vx: 0, vy: 0, t: 0});
+      flightPath.push({x: p.launchX, y: 0, vx: 0, vy: 0, t: 0.01});
+      landingPoint = {x: p.launchX, y: 0};
+      maxFlightHeight = p.launchY;
+      launchState = { x: p.launchX, y: p.launchY, vx: p.vx, vy: p.vy };
+      liveVx = 0; liveVy = 0; liveSpeed = 0;
+      updateStats(p, maxY);
+      return;
+    }
+
+    const dt = 0.002;
+    let x = p.launchX;
+    let y = p.launchY;
+    let vx = p.vx;
+    let vy = p.vy;
+    let tAcc = 0;
+    const withRes = p.withResistance;
+    const k = withRes ? (0.5 * AIR_DENSITY * DRAG_COEFF * BALL_AREA / BALL_MASS) : 0;
+
+    let stepCount = 0;
+    const storeEvery = 5;
+
+    const MAX_TIME = 8;
+
+    for (let iter = 0; iter < MAX_TIME / dt; iter++) {
+      if (stepCount % storeEvery === 0) {
+        flightPath.push({x, y, vx, vy, t: tAcc});
+        if (y > maxY) maxY = y;
+        if (x > maxX) maxX = x;
+      }
+      stepCount++;
+
+      // Landing detection
+      if (y <= 0 && tAcc > 0.01) {
+        flightPath.push({x, y: 0, vx, vy, t: tAcc});
+        landingPoint = {x, y: 0};
+        break;
+      }
+
+      // X-axis limit
+      if (x > X_LIMIT) {
+        const overshoot = (x - X_LIMIT) / (vx || 1);
+        const xClip = X_LIMIT;
+        const yClip = y - vy * overshoot;
+        flightPath.push({x: xClip, y: Math.max(yClip, 0), vx, vy, t: tAcc});
+        landingPoint = {x: xClip, y: Math.max(yClip, 0)};
+        break;
+      }
+
+      // Velocity update
+      if (withRes) {
+        const v = Math.sqrt(vx*vx + vy*vy);
+        const ax = -k * v * vx;
+        const ay = -g - k * v * vy;
+        vx += ax * dt;
+        vy += ay * dt;
+      } else {
+        vy -= g * dt;
+      }
+
+      // Position update
+      x += vx * dt;
+      y += vy * dt;
+      tAcc += dt;
+    }
+
+    if (flightPath.length === 0 || flightPath[flightPath.length-1].y > 0.01) {
+      flightPath.push({x: Math.min(x, X_LIMIT), y: 0, vx, vy, t: tAcc});
+      landingPoint = {x: Math.min(x, X_LIMIT), y: 0};
+    }
+
+    if (flightPath.length > 0) {
+      const last = flightPath[flightPath.length-1];
+      if (last.x < X_LIMIT - 0.001) {
+        flightPath[flightPath.length-1] = {x: last.x, y: 0, vx: last.vx, vy: last.vy, t: last.t};
+        landingPoint = {x: last.x, y: 0};
+      } else {
+        landingPoint = {x: last.x, y: last.y};
+      }
+    }
+
+    maxFlightHeight = maxY;
+    launchState = { x: p.launchX, y: p.launchY, vx: p.vx, vy: p.vy };
+
+    liveVx = p.vx;
+    liveVy = p.vy;
+    liveSpeed = p.v0;
+
+    updateStats(p, maxY);
+  }
+
+  function updateStats(p, maxY) {
+    let range = landingPoint.x - p.launchX;
+    if (range > X_LIMIT) range = X_LIMIT;
+    rangeVal.textContent = range.toFixed(2);
+    maxHeightVal.textContent = maxY.toFixed(2);
+
+    lengthVal.textContent = p.L.toFixed(2) + ' m';
+    slopeVal.textContent = p.slopeDeg + '°';
+    incidentVal.textContent = p.incidentDeg + '°';
+    platformVal.textContent = p.platformH.toFixed(2) + ' m';
+  }
+
+  // ===== Get current animation state (position + velocity) =====
+  function getCurrentState() {
+    const p = currentParams;
+    if (!p) return null;
+
+    if (animPhase === 'idle' || animPhase === 'done') {
+      if (animPhase === 'done') {
+        return { x: landingPoint.x, y: 0, vx: 0, vy: 0 };
+      }
+      return { x: p.launchX, y: p.launchY, vx: p.vx, vy: p.vy };
+    }
+
+    if (animPhase === 'sliding') {
+      const idx = Math.floor(animProgress * (slidePath.length - 1));
+      const pt = slidePath[idx];
+      return { x: pt.x, y: pt.y, vx: 0, vy: 0, sliding: true };
+    }
+
+    if (animPhase === 'flying') {
+      const total = flightPath.length;
+      const idx = Math.min(Math.floor(animProgress * (total - 1)), total - 1);
+      return flightPath[idx];
+    }
+
+    return null;
+  }
+
+  // ===== Drawing =====
+  function drawScene() {
+    const p = currentParams;
+    if (!p) return;
+
+    ctx.clearRect(0, 0, cw, ch);
+
+    // ===== World range: X-axis fixed 0 ~ 2m =====
+    const slopeMinX = Math.min(p.slopeStartX, -0.5);
+    const minX = slopeMinX - 0.3;
+    const maxX = X_LIMIT + 0.15;
+
+    let maxYWorld = Math.max(p.platformH, p.slopeStartY, 1.2);
+    if (flightPath.length > 0) {
+      flightPath.forEach(pt => { if (pt.y > maxYWorld) maxYWorld = pt.y; });
+    }
+    maxYWorld = Math.max(maxYWorld + 0.3, 1.5);
+
+    const worldWidth = maxX - minX;
+    const worldHeight = maxYWorld;
+
+    const availW = cw - padLeft - padRight;
+    const availH = ch - padTop - padBottom;
+
+    const scale = Math.min(availW / worldWidth, availH / worldHeight);
+    scaleX = scale;
+    scaleY = scale;
+
+    originX = padLeft - minX * scaleX;
+    originY = ch - padBottom;
+
+    drawGrid(originX, originY, scaleX, scaleY, minX, maxX, maxYWorld);
+
+    // Ground
+    ctx.save();
+    const gLeft = worldToCanvas(minX, 0);
+    const gRight = worldToCanvas(maxX, 0);
+    ctx.fillStyle = "#2b4b65";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#00000080";
+    ctx.fillRect(gLeft.x, gLeft.y - 4, gRight.x - gLeft.x, 8);
+    ctx.restore();
+
+    // Draw ramp structure
+    drawSlideStructure(p);
+
+    // Draw flight trajectory (dashed)
+    if (flightPath.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.strokeStyle = "#f5d371";
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#f5b342";
+      ctx.setLineDash([8, 8]);
+      flightPath.forEach((pt, idx) => {
+        const c = worldToCanvas(pt.x, pt.y);
+        if (idx === 0) ctx.moveTo(c.x, c.y);
+        else ctx.lineTo(c.x, c.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw X=2m limit line
+    const limitLine = worldToCanvas(X_LIMIT, 0);
+    const limitLineTop = worldToCanvas(X_LIMIT, maxYWorld);
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = "rgba(255, 100, 100, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(limitLine.x, limitLineTop.y);
+    ctx.lineTo(limitLine.x, limitLine.y);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 100, 100, 0.7)";
+    ctx.font = "12px 'Segoe UI'";
+    ctx.fillText("Range limit 2m", limitLine.x - 40, limitLineTop.y - 8);
+    ctx.restore();
+
+    // Landing marker
+    if (landingPoint) {
+      const landCanvas = worldToCanvas(landingPoint.x, landingPoint.y);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(landCanvas.x, landCanvas.y, 8, 0, 2*Math.PI);
+      ctx.fillStyle = "#f5b342";
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#f5b342";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ===== Current animation state =====
+    const state = getCurrentState();
+    if (!state) return;
+
+    const ballCanvas = worldToCanvas(state.x, state.y);
+
+    // Release point
+    drawReleasePoint(p);
+
+    // Ball
+    drawBallAt(ballCanvas.x, ballCanvas.y);
+
+    // ===== Live velocity vectors (in flight phase) =====
+    if (animPhase === 'flying' && state.vx !== undefined) {
+      liveVx = state.vx;
+      liveVy = state.vy;
+      liveSpeed = Math.sqrt(state.vx*state.vx + state.vy*state.vy);
+      speedVal.textContent = liveSpeed.toFixed(2);
+      vxVal.textContent = liveVx.toFixed(2);
+      vyVal.textContent = liveVy.toFixed(2);
+
+      drawVelocityVectors(ballCanvas.x, ballCanvas.y, state.vx, state.vy, true);
+    } else if (animPhase === 'idle' || animPhase === 'done') {
+      const vx = (animPhase === 'idle') ? p.vx : 0;
+      const vy = (animPhase === 'idle') ? p.vy : 0;
+      liveSpeed = Math.sqrt(vx*vx + vy*vy);
+      speedVal.textContent = liveSpeed.toFixed(2);
+      vxVal.textContent = vx.toFixed(2);
+      vyVal.textContent = vy.toFixed(2);
+      if (vx !== 0 || vy !== 0) {
+        drawVelocityVectors(ballCanvas.x, ballCanvas.y, vx, vy, false);
+      }
+    } else if (animPhase === 'sliding') {
+      liveVx = 0; liveVy = 0; liveSpeed = 0;
+      speedVal.textContent = "0.00";
+      vxVal.textContent = "0.00";
+      vyVal.textContent = "0.00";
+    }
+  }
+
+  // Draw ramp structure
+  function drawSlideStructure(p) {
+    const launchCanvas = worldToCanvas(p.launchX, p.launchY);
+    const slopeStartCanvas = worldToCanvas(p.slopeStartX, p.slopeStartY);
+    const groundAtLaunch = worldToCanvas(p.launchX, 0);
+
+    // Support pillar
+    if (p.platformH > 0.02) {
+      ctx.save();
+      ctx.fillStyle = "#3c5e7a";
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#00000060";
+      ctx.fillRect(launchCanvas.x - 8, launchCanvas.y, 16, groundAtLaunch.y - launchCanvas.y);
+      ctx.fillStyle = "#4d6f8c";
+      ctx.fillRect(launchCanvas.x - 30, groundAtLaunch.y - 8, 60, 8);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.fillStyle = "#4d6f8c";
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = "#00000060";
+      ctx.fillRect(launchCanvas.x - 20, launchCanvas.y - 4, 40, 8);
+      ctx.restore();
+    }
+
+    // Ramp incline
+    ctx.save();
+    ctx.strokeStyle = "#6b8da8";
+    ctx.lineWidth = 8;
+    ctx.lineCap = "round";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#3a6e9e";
+    ctx.beginPath();
+    ctx.moveTo(slopeStartCanvas.x, slopeStartCanvas.y);
+    ctx.lineTo(launchCanvas.x, launchCanvas.y);
+    ctx.stroke();
+    ctx.strokeStyle = "#aaccdd";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(slopeStartCanvas.x, slopeStartCanvas.y);
+    ctx.lineTo(launchCanvas.x, launchCanvas.y);
+    ctx.stroke();
+    ctx.restore();
+
+    // Exit angle indicator
+    const incidentRad = p.incidentRad;
+    const launchX = p.launchX;
+    const launchY = p.launchY;
+
+    // Horizontal reference
+    const refLength = 1.0;
+    const refEnd = worldToCanvas(launchX + refLength, launchY);
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = "rgba(160, 200, 255, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(launchCanvas.x, launchCanvas.y);
+    ctx.lineTo(refEnd.x, refEnd.y);
+    ctx.stroke();
+    ctx.restore();
+
+    // Angle sector
+    const arcRadius = 50;
+    const startAngle = 0;
+    const endAngle = -incidentRad;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(launchCanvas.x, launchCanvas.y);
+    ctx.arc(launchCanvas.x, launchCanvas.y, arcRadius, startAngle, endAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(94, 176, 240, 0.25)";
+    ctx.fill();
+    ctx.strokeStyle = "#5eb0f0";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(launchCanvas.x, launchCanvas.y, arcRadius, startAngle, endAngle, true);
+    ctx.stroke();
+    ctx.restore();
+
+    // Angle text
+    const textAngle = -incidentRad / 2;
+    const textRadius = arcRadius * 0.75;
+    const textX = launchCanvas.x + textRadius * Math.cos(textAngle);
+    const textY = launchCanvas.y + textRadius * Math.sin(textAngle);
+    ctx.save();
+    ctx.font = "bold 15px 'Segoe UI'";
+    ctx.fillStyle = "#8ec9ff";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#000";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(p.incidentDeg + "°", textX, textY);
+    ctx.restore();
+
+    // Launch direction arrow
+    const arrowLength = 0.8;
+    const arrowEndX = launchX + arrowLength * Math.cos(incidentRad);
+    const arrowEndY = launchY + arrowLength * Math.sin(incidentRad);
+    const arrowEndCanvas = worldToCanvas(arrowEndX, arrowEndY);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(launchCanvas.x, launchCanvas.y);
+    ctx.lineTo(arrowEndCanvas.x, arrowEndCanvas.y);
+    ctx.strokeStyle = "#5eb0f0";
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#2f9eff";
+    ctx.stroke();
+    const angle = Math.atan2(arrowEndCanvas.y - launchCanvas.y, arrowEndCanvas.x - launchCanvas.x);
+    const headLen = 12;
+    ctx.beginPath();
+    ctx.moveTo(arrowEndCanvas.x, arrowEndCanvas.y);
+    ctx.lineTo(arrowEndCanvas.x - headLen * Math.cos(angle - 0.4), arrowEndCanvas.y - headLen * Math.sin(angle - 0.4));
+    ctx.lineTo(arrowEndCanvas.x - headLen * Math.cos(angle + 0.4), arrowEndCanvas.y - headLen * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fillStyle = "#5eb0f0";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#2f9eff";
+    ctx.fill();
+    ctx.restore();
+
+    // End transition arc
+    const slopeEndAngle = Math.atan2(-Math.sin(p.slopeRad), -Math.cos(p.slopeRad));
+    const launchAngleCanvas = -incidentRad;
+    ctx.save();
+    ctx.beginPath();
+    const arcR = 28;
+    ctx.arc(launchCanvas.x, launchCanvas.y, arcR, slopeEndAngle, launchAngleCanvas, false);
+    ctx.strokeStyle = "#7aaccc";
+    ctx.lineWidth = 6;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#3a6e9e";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawReleasePoint(p) {
+    const releaseCanvas = worldToCanvas(p.slopeStartX, p.slopeStartY);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(releaseCanvas.x, releaseCanvas.y, 7, 0, 2*Math.PI);
+    ctx.fillStyle = "rgba(200, 230, 255, 0.5)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(180, 220, 255, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = "12px 'Segoe UI'";
+    ctx.fillStyle = "#b0d0f0";
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = "#000";
+    ctx.textAlign = "center";
+    ctx.fillText("Release point", releaseCanvas.x, releaseCanvas.y - 18);
+    ctx.restore();
+  }
+
+  function drawBallAt(canvasX, canvasY) {
+    const ballRadiusPx = Math.max(BALL_RADIUS * scaleX, 6);
+    ctx.save();
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = "#7ec8ff";
+    ctx.beginPath();
+    ctx.arc(canvasX, canvasY, ballRadiusPx, 0, 2*Math.PI);
+    ctx.fillStyle = "#f0f9ff";
+    ctx.fill();
+    ctx.strokeStyle = "#b0e0ff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(canvasX, canvasY, ballRadiusPx * 0.5, 0, 2*Math.PI);
+    ctx.fillStyle = "#5eb0f0";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw velocity vectors (live vx, vy)
+  function drawVelocityVectors(cx, cy, vx, vy, isLive) {
+    const velScale = 28;
+    const vxPix = vx * velScale;
+    const vyPix = vy * velScale;
+
+    // Horizontal component (red)
+    if (Math.abs(vxPix) > 2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + vxPix, cy);
+      ctx.strokeStyle = "#ff6b6b";
+      ctx.lineWidth = isLive ? 3.5 : 3;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#ff3b3b";
+      ctx.stroke();
+      ctx.fillStyle = "#ff6b6b";
+      ctx.beginPath();
+      ctx.moveTo(cx + vxPix, cy);
+      ctx.lineTo(cx + vxPix - 10, cy - 6);
+      ctx.lineTo(cx + vxPix - 10, cy + 6);
+      ctx.fill();
+      ctx.font = "bold 13px 'Segoe UI'";
+      ctx.fillStyle = "#ff9e9e";
+      ctx.shadowBlur = 6;
+      const label = isLive ? `vx=${vx.toFixed(2)}` : "vx";
+      ctx.fillText(label, cx + vxPix + 6, cy - 8);
+      ctx.restore();
+    }
+
+    // Vertical component (blue)
+    if (Math.abs(vyPix) > 2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - vyPix);
+      ctx.strokeStyle = "#6bc9ff";
+      ctx.lineWidth = isLive ? 3.5 : 3;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#2f9eff";
+      ctx.stroke();
+      ctx.fillStyle = "#6bc9ff";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - vyPix);
+      ctx.lineTo(cx - 6, cy - vyPix + 10);
+      ctx.lineTo(cx + 6, cy - vyPix + 10);
+      ctx.fill();
+      ctx.font = "bold 13px 'Segoe UI'";
+      ctx.fillStyle = "#9ed9ff";
+      ctx.shadowBlur = 6;
+      const label = isLive ? `vy=${vy.toFixed(2)}` : "vy";
+      ctx.fillText(label, cx + 8, cy - vyPix - 6);
+      ctx.restore();
+    }
+
+    // Resultant velocity (green dashed)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + vxPix, cy - vyPix);
+    ctx.strokeStyle = "#a0ffb0";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#7eff7e";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawGrid(originX, originY, scaleX, scaleY, minX, maxX, maxY) {
+    ctx.save();
+    ctx.strokeStyle = "#2d4b62";
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.4;
+
+    const startX = Math.floor(minX);
+    const endX = Math.ceil(maxX);
+    for (let x = startX; x <= endX; x++) {
+      const canvasX = originX + x * scaleX;
+      if (canvasX < padLeft - 10 || canvasX > cw - padRight + 10) continue;
+      ctx.beginPath();
+      ctx.moveTo(canvasX, padTop);
+      ctx.lineTo(canvasX, ch - padBottom);
+      ctx.stroke();
+    }
+
+    const startY = 0;
+    const endY = Math.ceil(maxY);
+    for (let y = startY; y <= endY; y++) {
+      const canvasY = originY - y * scaleY;
+      if (canvasY < padTop - 10 || canvasY > ch - padBottom + 10) continue;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, canvasY);
+      ctx.lineTo(cw - padRight, canvasY);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Axes
+    ctx.save();
+    ctx.strokeStyle = "#8aaec9";
+    ctx.lineWidth = 1.5;
+    const xAxisY = originY;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, xAxisY);
+    ctx.lineTo(cw - padRight, xAxisY);
+    ctx.stroke();
+    const yAxisX = originX;
+    ctx.beginPath();
+    ctx.moveTo(yAxisX, padTop);
+    ctx.lineTo(yAxisX, ch - padBottom);
+    ctx.stroke();
+    ctx.fillStyle = "#8aaec9";
+    ctx.beginPath();
+    ctx.moveTo(cw - padRight, xAxisY);
+    ctx.lineTo(cw - padRight - 12, xAxisY - 6);
+    ctx.lineTo(cw - padRight - 12, xAxisY + 6);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(yAxisX, padTop);
+    ctx.lineTo(yAxisX - 6, padTop + 12);
+    ctx.lineTo(yAxisX + 6, padTop + 12);
+    ctx.fill();
+    ctx.font = "14px 'Segoe UI'";
+    ctx.fillStyle = "#b6d0e8";
+    ctx.fillText("Horizontal distance (m)", cw - padRight - 170, xAxisY + 28);
+    ctx.save();
+    ctx.translate(yAxisX - 30, padTop + 20);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Height (m)", 0, 0);
+    ctx.restore();
+    ctx.restore();
+
+    // Physics toggle status
+    ctx.save();
+    ctx.font = "12px 'Segoe UI'";
+    ctx.fillStyle = physicsToggle.checked ? "#8effa0" : "#ff9e9e";
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = "#000";
+    ctx.fillText(physicsToggle.checked ? "✓ Friction + Air Drag ON" : "✗ Friction + Air Drag OFF", padLeft + 10, ch - 15);
+    ctx.restore();
+  }
+
+  // ===== Animation control =====
+  function startAnimation() {
+    if (animationId) cancelAnimationFrame(animationId);
+    computeTrajectory();
+
+    if (currentParams.v0 < 0.01) {
+      animPhase = 'done';
+      animProgress = 1;
+      drawScene();
+      return;
+    }
+
+    animPhase = 'sliding';
+    animProgress = 0;
+    lastTimestamp = 0;
+
+    const slideDuration = 700;
+    const flyDuration = 1400;
+
+    function step(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const elapsed = timestamp - lastTimestamp;
+
+      if (animPhase === 'sliding') {
+        animProgress = Math.min(elapsed / slideDuration, 1);
+        drawScene();
+        if (animProgress >= 1) {
+          animPhase = 'flying';
+          animProgress = 0;
+          lastTimestamp = timestamp;
+        }
+      } else if (animPhase === 'flying') {
+        animProgress = Math.min(elapsed / flyDuration, 1);
+        drawScene();
+        if (animProgress >= 1) {
+          animPhase = 'done';
+          animProgress = 1;
+          drawScene();
+          return;
+        }
+      }
+
+      animationId = requestAnimationFrame(step);
+    }
+
+    animationId = requestAnimationFrame(step);
+  }
+
+  function redrawStatic() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    animPhase = 'idle';
+    animProgress = 0;
+    computeTrajectory();
+    drawScene();
+  }
+
+  // ===== Event binding =====
+  [lengthSlider, slopeSlider, incidentSlider, platformSlider].forEach(slider => {
+    slider.addEventListener('input', redrawStatic);
+  });
+  physicsToggle.addEventListener('change', redrawStatic);
+
+  canvas.addEventListener('click', () => {
+    if (animPhase === 'sliding' || animPhase === 'flying') return;
+    startAnimation();
+  });
+
+  computeTrajectory();
+  drawScene();
+
+  setTimeout(() => {
+    startAnimation();
+  }, 600);
+})();
+</script>
+</body>
+</html>
