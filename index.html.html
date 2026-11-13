@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramp Launch · Final Formula Model</title>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+  body {
+    background: linear-gradient(145deg, #1b2b3f 0%, #0f1a26 100%);
+    min-height: 100vh; display: flex; justify-content: center; align-items: center;
+    margin: 0; padding: 20px;
+  }
+  .card {
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(8px);
+    border-radius: 2rem; box-shadow: 0 25px 40px -10px rgba(0,0,0,0.6);
+    padding: 1.8rem 2rem 2rem 2rem; border: 1px solid rgba(255,255,255,0.15);
+    max-width: 1300px; width: fit-content;
+  }
+  h1 {
+    margin: 0 0 0.25rem 0; font-weight: 500; font-size: 1.8rem;
+    color: #e1e9f0; text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  h1 span {
+    font-size: 0.95rem; background: #3e5b7c; padding: 0.2rem 1rem;
+    border-radius: 40px; font-weight: 400; color: #bdd3e8; border: 1px solid #5a7a9c;
+  }
+  .subhead {
+    color: #a0b8cf; margin: 0 0 1rem 0; font-size: 0.95rem;
+    border-left: 3px solid #3d9cd6; padding-left: 1rem; font-style: italic;
+  }
+  .canvas-wrapper {
+    position: relative; display: flex; justify-content: center;
+    background: #0b1219; border-radius: 1.8rem; padding: 0.6rem;
+    box-shadow: inset 0 5px 8px rgba(0,0,0,0.7), 0 10px 20px -5px black;
+    border: 1px solid #2b4257;
+  }
+  canvas {
+    display: block; width: 100%; height: auto; border-radius: 1.4rem;
+    background: radial-gradient(circle at 30% 30%, #1a2d3e, #0b141e);
+  }
+  .controls {
+    margin-top: 1.4rem; display: grid;
+    grid-template-columns: repeat(2, 1fr); gap: 1rem 2rem; align-items: center;
+  }
+  .slider-container { display: flex; flex-direction: column; gap: 0.15rem; }
+  .slider-container label {
+    display: flex; justify-content: space-between; font-size: 0.88rem;
+    color: #b6d0e8; letter-spacing: 0.2px; text-shadow: 0 1px 2px black;
+  }
+  .slider-container label span {
+    color: #8ec9ff; font-weight: 600; background: #132433;
+    padding: 0.1rem 0.7rem; border-radius: 40px; font-size: 0.82rem;
+    border: 1px solid #2e4c68;
+  }
+  input[type=range] {
+    width: 100%; height: 6px; border-radius: 10px; background: #203444;
+    -webkit-appearance: none; appearance: none; outline: none; margin: 0.35rem 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: #5eb0f0; border: 2px solid white;
+    box-shadow: 0 0 8px #00a6ff; cursor: pointer; transition: 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    background: #7fc4ff; transform: scale(1.15);
+  }
+  .toggle-container {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 0.8rem;
+    background: rgba(0,0,0,0.3); padding: 0.4rem 1rem; border-radius: 40px;
+    border: 1px solid #2d4b65; justify-content: center; margin-top: 0.5rem;
+  }
+  .toggle-container label {
+    color: #b6d0e8; font-size: 0.9rem; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .toggle-container input[type=checkbox] {
+    appearance: none; width: 40px; height: 22px; background: #203444;
+    border-radius: 20px; position: relative; cursor: pointer; outline: none;
+    border: 1px solid #3a5a78; transition: 0.2s;
+  }
+  .toggle-container input[type=checkbox]::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #6b8da8; border-radius: 50%; transition: 0.2s;
+  }
+  .toggle-container input[type=checkbox]:checked {
+    background: #1e4d6b;
+  }
+  .toggle-container input[type=checkbox]:checked::after {
+    left: 20px; background: #5eb0f0; box-shadow: 0 0 8px #00a6ff;
+  }
+  .stats {
+    grid-column: 1 / -1; display: flex; justify-content: space-around;
+    flex-wrap: wrap; gap: 0.6rem 1.5rem; background: rgba(0,0,0,0.35);
+    border-radius: 60px; padding: 0.8rem 1.5rem; margin-top: 0.5rem;
+    border: 1px solid #2d4b65; backdrop-filter: blur(5px);
+  }
+  .stat-item { display: flex; align-items: baseline; gap: 0.35rem; color: #9fb7d0; font-size: 0.92rem; }
+  .stat-item .value {
+    font-weight: 700; font-size: 1.3rem; color: #c3e2ff;
+    text-shadow: 0 0 8px #2f8fd0; letter-spacing: -0.5px;
+  }
+  .stat-item .unit { font-size: 0.72rem; color: #7a99b5; margin-left: 0.05rem; }
+  .note {
+    grid-column: 1 / -1; text-align: center; color: #7d9bb8;
+    font-size: 0.8rem; margin-top: 0.1rem; border-top: 1px dashed #2b4a62; padding-top: 0.7rem;
+  }
+  .badge {
+    color: #ffd966; font-weight: 600; background: #2c3e4e;
+    padding: 0.1rem 0.6rem; border-radius: 20px; font-size: 0.78rem;
+  }
+  .formula-text {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 1.05rem;
+    color: #b0d0f0;
+    margin: 0.5rem 0;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🛝 Ramp Launch · Final Formula Model <span>PVC · L=97cm, H=77cm</span></h1>
+  <div class="subhead">Variables: Exit Height (h2) & Exit Angle (θ). Fixed Ramp: Length=0.97m, Height=0.77m (≈52.54°).</div>
+
+  <div class="canvas-wrapper">
+    <canvas id="trajectoryCanvas" width="1100" height="560"></canvas>
+  </div>
+
+  <div class="controls">
+    <div class="slider-container">
+      <label>🏗️ Device Height above Ground (h2) <span id="heightVal">0.80 m</span></label>
+      <input type="range" id="heightSlider" min="0" max="2.50" value="0.80" step="0.05">
+    </div>
+    <div class="slider-container">
+      <label>📐 Exit Angle (θ, from horizontal) <span id="angleVal">30°</span></label>
+      <input type="range" id="angleSlider" min="5" max="75" value="30" step="1">
+    </div>
+
+    <div class="toggle-container">
+      <label>
+        <input type="checkbox" id="dragToggle" checked> 
+        <span>Include Air Drag (Visual trajectory) - Formula assumes no drag</span>
+      </label>
+    </div>
+
+    <div class="stats">
+      <div class="stat-item">🎯 Initial Speed (v) <span class="value" id="v0Val">0.00</span><span class="unit">m/s</span></div>
+      <div class="stat-item">📏 Range (Formula x) <span class="value" id="rangeFormulaVal">0.00</span><span class="unit">m</span></div>
+      <div class="stat-item">📏 Range (Simulated) <span class="value" id="rangeSimVal">0.00</span><span class="unit">m</span></div>
+      <div class="stat-item">📈 Max Height <span class="value" id="maxHeightVal">0.00</span><span class="unit">m</span></div>
+    </div>
+    <div class="note">
+      <span class="badge">💡 Group Formula</span> 
+      <div class="formula-text">
+        x = (10/7)(h1 - μl)sinθcosθ + cosθ √[ (100/49)(h1 - μl)²sin²θ + (20/7)(h1 - μl)h2 ]
+      </div>
+      *(Note: h1=0.77m, l=0.97m. Friction μ=0.15 is included in the (h1 - μl) term. Formula ignores air drag).*
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('trajectoryCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // ===== Physical Constants =====
+  const g = 9.8;
+  const BALL_RADIUS = 0.021;       // 21mm radius
+  const BALL_MASS = 0.0459;        // 45.9g
+  const BALL_AREA = Math.PI * BALL_RADIUS * BALL_RADIUS;
+  const AIR_DENSITY = 1.225;       // kg/m³
+  const DRAG_COEFF = 0.25;
+  const MU = 0.15;                 // 摩擦因数 (PVC & Golf Ball)
+
+  // ===== Fixed Parameters =====
+  const RAMP_LENGTH = 0.97;        // 97 cm
+  const RAMP_HEIGHT = 0.77;        // 77 cm
+  const RAMP_ANGLE_RAD = Math.asin(RAMP_HEIGHT / RAMP_LENGTH); 
+  const RAMP_ANGLE_DEG = RAMP_ANGLE_RAD * 180 / Math.PI;
+
+  // ===== DOM =====
+  const heightSlider = document.getElementById('heightSlider');
+  const angleSlider = document.getElementById('angleSlider');
+  const dragToggle = document.getElementById('dragToggle');
+
+  const heightVal = document.getElementById('heightVal');
+  const angleVal = document.getElementById('angleVal');
+
+  const v0Val = document.getElementById('v0Val');
+  const rangeFormulaVal = document.getElementById('rangeFormulaVal');
+  const rangeSimVal = document.getElementById('rangeSimVal');
+  const maxHeightVal = document.getElementById('maxHeightVal');
+
+  // ===== Canvas Layout =====
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const padLeft = 80, padRight = 60, padTop = 50, padBottom = 70;
+
+  let scaleX, scaleY, originX, originY;
+
+  let animProgress = 0;
+  let animPhase = 'idle';
+  let lastTimestamp = 0;
+  let animationId = null;
+
+  let currentParams = null;
+  let slidePath = [];
+  let flightPath = [];
+  let landingPoint = {x:0, y:0};
+  let maxFlightHeight = 0;
+
+  function getParams() {
+    const h2 = parseFloat(heightSlider.value);
+    const thetaDeg = parseFloat(angleSlider.value);
+    const thetaRad = thetaDeg * Math.PI / 180;
+    const withDrag = dragToggle.checked;
+
+    // 扣除摩擦力做功后的有效高度
+    const effectiveH = RAMP_HEIGHT - MU * RAMP_LENGTH;
+    let v0 = 0;
+    if (effectiveH > 0) {
+      // 依据公式隐含系数 (10/7) 计算初速度
+      v0 = Math.sqrt((10/7) * g * effectiveH); 
+    }
+
+    // 公式计算 Range (x)
+    const A = effectiveH;
+    let rangeFormula = 0;
+    
+    if (A > 0) {
+      const term1 = (10/7) * A * Math.sin(thetaRad) * Math.cos(thetaRad);
+      const insideSqrt = (100/49) * A * A * Math.sin(thetaRad) * Math.sin(thetaRad) + (20/7) * A * h2;
+      
+      if (insideSqrt >= 0) {
+        const term2 = Math.cos(thetaRad) * Math.sqrt(insideSqrt);
+        rangeFormula = term1 + term2;
+      }
+    }
+
+    return {
+      h2, thetaDeg, thetaRad, withDrag, v0, rangeFormula,
+      rampStartX: -RAMP_LENGTH * Math.cos(RAMP_ANGLE_RAD),
+      rampStartY: h2 + RAMP_HEIGHT, 
+      launchX: 0,
+      launchY: h2
+    };
+  }
+
+  function worldToCanvas(x, y) {
+    return {
+      x: originX + x * scaleX,
+      y: originY - y * scaleY
+    };
+  }
+
+  function computeTrajectory() {
+    const p = getParams();
+    currentParams = p;
+
+    slidePath = [];
+    const slideSteps = 40;
+    for (let i = 0; i <= slideSteps; i++) {
+      const t = i / slideSteps;
+      const x = p.rampStartX + (p.launchX - p.rampStartX) * t;
+      const y = p.rampStartY + (p.launchY - p.rampStartY) * t;
+      slidePath.push({x, y});
+    }
+
+    flightPath = [];
+    let maxY = p.launchY;
+
+    if (p.v0 < 0.01) {
+      flightPath.push({x: p.launchX, y: p.launchY, vx: 0, vy: 0});
+      flightPath.push({x: p.launchX, y: 0, vx: 0, vy: 0});
+      landingPoint = {x: p.launchX, y: 0};
+      updateStats(p, maxY);
+      return;
+    }
+
+    const dt = 0.002;
+    let x = p.launchX;
+    let y = p.launchY;
+    let vx = p.v0 * Math.cos(p.thetaRad);
+    let vy = p.v0 * Math.sin(p.thetaRad);
+    
+    const k = p.withDrag ? (0.5 * AIR_DENSITY * DRAG_COEFF * BALL_AREA / BALL_MASS) : 0;
+
+    let stepCount = 0;
+    const storeEvery = 5;
+    const MAX_TIME = 8;
+
+    for (let iter = 0; iter < MAX_TIME / dt; iter++) {
+      if (stepCount % storeEvery === 0) {
+        flightPath.push({x, y, vx, vy});
+        if (y > maxY) maxY = y;
+      }
+      stepCount++;
+
+      if (y <= 0 && iter > 5) {
+        flightPath.push({x, y: 0, vx, vy});
+        landingPoint = {x, y: 0};
+        break;
+      }
+
+      if (k > 0) {
+        const v = Math.sqrt(vx*vx + vy*vy);
+        vx += (-k * v * vx) * dt;
+        vy += (-g - k * v * vy) * dt;
+      } else {
+        vy -= g * dt;
+      }
+
+      x += vx * dt;
+      y += vy * dt;
+    }
+
+    if (flightPath.length === 0 || flightPath[flightPath.length-1].y > 0.01) {
+      flightPath.push({x, y: 0, vx, vy});
+      landingPoint = {x, y: 0};
+    }
+
+    updateStats(p, maxY);
+  }
+
+  function updateStats(p, maxY) {
+    v0Val.textContent = p.v0.toFixed(2);
+    rangeFormulaVal.textContent = p.rangeFormula.toFixed(3);
+    rangeSimVal.textContent = landingPoint.x.toFixed(3);
+    maxHeightVal.textContent = maxY.toFixed(2);
+
+    heightVal.textContent = p.h2.toFixed(2) + ' m';
+    angleVal.textContent = p.thetaDeg + '°';
+  }
+
+  function drawScene() {
+    const p = currentParams;
+    if (!p) return;
+
+    ctx.clearRect(0, 0, cw, ch);
+
+    const minX = p.rampStartX - 0.2;
+    const maxX = Math.max(p.rangeFormula, landingPoint.x, p.launchX + 1.0) + 0.2;
+    
+    let maxYWorld = Math.max(p.h2, p.rampStartY, 1.2);
+    if (flightPath.length > 0) {
+      flightPath.forEach(pt => { if (pt.y > maxYWorld) maxYWorld = pt.y; });
+    }
+    maxYWorld += 0.5;
+
+    const worldWidth = maxX - minX;
+    const worldHeight = maxYWorld;
+
+    const availW = cw - padLeft - padRight;
+    const availH = ch - padTop - padBottom;
+
+    const scale = Math.min(availW / worldWidth, availH / worldHeight);
+    scaleX = scale;
+    scaleY = scale;
+
+    originX = padLeft - minX * scaleX;
+    originY = ch - padBottom;
+
+    drawGrid(originX, originY, scaleX, scaleY, minX, maxX, maxYWorld);
+
+    ctx.save();
+    const gLeft = worldToCanvas(minX, 0);
+    const gRight = worldToCanvas(maxX, 0);
+    ctx.fillStyle = "#2b4b65";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#00000080";
+    ctx.fillRect(gLeft.x, gLeft.y - 4, gRight.x - gLeft.x, 8);
+    ctx.restore();
+
+    drawSlideStructure(p);
+
+    if (flightPath.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.strokeStyle = "#f5d371";
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#f5b342";
+      ctx.setLineDash([8, 8]);
+      flightPath.forEach((pt, idx) => {
+        const c = worldToCanvas(pt.x, pt.y);
+        if (idx === 0) ctx.moveTo(c.x, c.y);
+        else ctx.lineTo(c.x, c.y);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const landCanvas = worldToCanvas(landingPoint.x, landingPoint.y);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(landCanvas.x, landCanvas.y, 8, 0, 2*Math.PI);
+    ctx.fillStyle = "#f5b342";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#f5b342";
+    ctx.fill();
+    ctx.restore();
+
+    const state = getCurrentState();
+    if (!state) return;
+
+    const ballCanvas = worldToCanvas(state.x, state.y);
+    drawBallAt(ballCanvas.x, ballCanvas.y);
+    
+    if (animPhase === 'flying' && state.vx !== undefined) {
+      drawVelocityVectors(ballCanvas.x, ballCanvas.y, state.vx, state.vy);
+    }
+  }
+
+  function getCurrentState() {
+    const p = currentParams;
+    if (animPhase === 'idle' || animPhase === 'done') {
+      if (animPhase === 'done') return { x: landingPoint.x, y: 0, vx: 0, vy: 0 };
+      return { x: p.launchX, y: p.launchY, vx: p.v0 * Math.cos(p.thetaRad), vy: p.v0 * Math.sin(p.thetaRad) };
+    }
+    if (animPhase === 'sliding') {
+      const idx = Math.floor(animProgress * (slidePath.length - 1));
+      return { x: slidePath[idx].x, y: slidePath[idx].y, vx: 0, vy: 0 };
+    }
+    if (animPhase === 'flying') {
+      const total = flightPath.length;
+      const idx = Math.min(Math.floor(animProgress * (total - 1)), total - 1);
+      return flightPath[idx];
+    }
+    return null;
+  }
+
+  function drawSlideStructure(p) {
+    const launchCanvas = worldToCanvas(p.launchX, p.launchY);
+    const slopeStartCanvas = worldToCanvas(p.rampStartX, p.rampStartY);
+    const groundAtLaunch = worldToCanvas(p.launchX, 0);
+
+    if (p.h2 > 0.02) {
+      ctx.save();
+      ctx.fillStyle = "#3c5e7a";
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#00000060";
+      ctx.fillRect(launchCanvas.x - 8, launchCanvas.y, 16, groundAtLaunch.y - launchCanvas.y);
+      ctx.fillStyle = "#4d6f8c";
+      ctx.fillRect(launchCanvas.x - 30, groundAtLaunch.y - 8, 60, 8);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.fillStyle = "#4d6f8c";
+      ctx.fillRect(launchCanvas.x - 20, launchCanvas.y - 4, 40, 8);
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#6b8da8";
+    ctx.lineWidth = 8;
+    ctx.lineCap = "round";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#3a6e9e";
+    ctx.beginPath();
+    ctx.moveTo(slopeStartCanvas.x, slopeStartCanvas.y);
+    ctx.lineTo(launchCanvas.x, launchCanvas.y);
+    ctx.stroke();
+    ctx.restore();
+    
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(slopeStartCanvas.x, slopeStartCanvas.y, 6, 0, 2*Math.PI);
+    ctx.fillStyle = "#b0d0f0";
+    ctx.fill();
+    ctx.restore();
+
+    const arcRadius = 50;
+    const startAngle = 0;
+    const endAngle = -p.thetaRad;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(launchCanvas.x, launchCanvas.y);
+    ctx.arc(launchCanvas.x, launchCanvas.y, arcRadius, startAngle, endAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(94, 176, 240, 0.25)";
+    ctx.fill();
+    ctx.strokeStyle = "#5eb0f0";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(launchCanvas.x, launchCanvas.y, arcRadius, startAngle, endAngle, true);
+    ctx.stroke();
+    ctx.restore();
+
+    const refEnd = worldToCanvas(p.launchX + 1.0, p.launchY);
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = "rgba(160, 200, 255, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(launchCanvas.x, launchCanvas.y);
+    ctx.lineTo(refEnd.x, refEnd.y);
+    ctx.stroke();
+    ctx.restore();
+
+    const textAngle = -p.thetaRad / 2;
+    const textRadius = arcRadius * 0.75;
+    ctx.save();
+    ctx.font = "bold 15px 'Segoe UI'";
+    ctx.fillStyle = "#8ec9ff";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#000";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(p.thetaDeg + "°", launchCanvas.x + textRadius * Math.cos(textAngle), launchCanvas.y + textRadius * Math.sin(textAngle));
+    ctx.restore();
+  }
+
+  function drawBallAt(x, y) {
+    const r = Math.max(BALL_RADIUS * scaleX, 6);
+    ctx.save();
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = "#7ec8ff";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2*Math.PI);
+    ctx.fillStyle = "#f0f9ff";
+    ctx.fill();
+    ctx.strokeStyle = "#b0e0ff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.5, 0, 2*Math.PI);
+    ctx.fillStyle = "#5eb0f0";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawVelocityVectors(cx, cy, vx, vy) {
+    const velScale = 28;
+    const vxPix = vx * velScale;
+    const vyPix = vy * velScale;
+
+    if (Math.abs(vxPix) > 2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy); ctx.lineTo(cx + vxPix, cy);
+      ctx.strokeStyle = "#ff6b6b"; ctx.lineWidth = 3;
+      ctx.shadowBlur = 12; ctx.shadowColor = "#ff3b3b";
+      ctx.stroke();
+      ctx.fillStyle = "#ff6b6b";
+      ctx.beginPath();
+      ctx.moveTo(cx + vxPix, cy);
+      ctx.lineTo(cx + vxPix - 10, cy - 6);
+      ctx.lineTo(cx + vxPix - 10, cy + 6);
+      ctx.fill();
+      ctx.font = "bold 12px 'Segoe UI'"; ctx.fillStyle = "#ff9e9e";
+      ctx.fillText(`vx=${vx.toFixed(2)}`, cx + vxPix + 6, cy - 8);
+      ctx.restore();
+    }
+
+    if (Math.abs(vyPix) > 2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - vyPix);
+      ctx.strokeStyle = "#6bc9ff"; ctx.lineWidth = 3;
+      ctx.shadowBlur = 12; ctx.shadowColor = "#2f9eff";
+      ctx.stroke();
+      ctx.fillStyle = "#6bc9ff";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - vyPix);
+      ctx.lineTo(cx - 6, cy - vyPix + 10);
+      ctx.lineTo(cx + 6, cy - vyPix + 10);
+      ctx.fill();
+      ctx.font = "bold 12px 'Segoe UI'"; ctx.fillStyle = "#9ed9ff";
+      ctx.fillText(`vy=${vy.toFixed(2)}`, cx + 8, cy - vyPix - 6);
+      ctx.restore();
+    }
+  }
+
+  function drawGrid(originX, originY, scaleX, scaleY, minX, maxX, maxY) {
+    ctx.save();
+    ctx.strokeStyle = "#2d4b62"; ctx.lineWidth = 0.5; ctx.globalAlpha = 0.4;
+    for (let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
+      const cx = originX + x * scaleX;
+      if (cx < padLeft - 10 || cx > cw - padRight + 10) continue;
+      ctx.beginPath(); ctx.moveTo(cx, padTop); ctx.lineTo(cx, ch - padBottom); ctx.stroke();
+    }
+    for (let y = 0; y <= Math.ceil(maxY); y++) {
+      const cy = originY - y * scaleY;
+      if (cy < padTop - 10 || cy > ch - padBottom + 10) continue;
+      ctx.beginPath(); ctx.moveTo(padLeft, cy); ctx.lineTo(cw - padRight, cy); ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = "#8aaec9"; ctx.lineWidth = 1.5;
+    const xAxisY = originY;
+    ctx.beginPath(); ctx.moveTo(padLeft, xAxisY); ctx.lineTo(cw - padRight, xAxisY); ctx.stroke();
+    const yAxisX = originX;
+    ctx.beginPath(); ctx.moveTo(yAxisX, padTop); ctx.lineTo(yAxisX, ch - padBottom); ctx.stroke();
+    ctx.fillStyle = "#8aaec9";
+    ctx.beginPath(); ctx.moveTo(cw - padRight, xAxisY); ctx.lineTo(cw - padRight - 12, xAxisY - 6); ctx.lineTo(cw - padRight - 12, xAxisY + 6); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(yAxisX, padTop); ctx.lineTo(yAxisX - 6, padTop + 12); ctx.lineTo(yAxisX + 6, padTop + 12); ctx.fill();
+    ctx.font = "14px 'Segoe UI'"; ctx.fillStyle = "#b6d0e8";
+    ctx.fillText("Horizontal distance (m)", cw - padRight - 170, xAxisY + 28);
+    ctx.save();
+    ctx.translate(yAxisX - 30, padTop + 20); ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Height (m)", 0, 0);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function startAnimation() {
+    if (animationId) cancelAnimationFrame(animationId);
+    computeTrajectory();
+
+    if (currentParams.v0 < 0.01) {
+      animPhase = 'done'; animProgress = 1; drawScene(); return;
+    }
+
+    animPhase = 'sliding';
+    animProgress = 0;
+    lastTimestamp = 0;
+
+    const slideDuration = 500;
+    const flyDuration = 1200;
+
+    function step(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const elapsed = timestamp - lastTimestamp;
+
+      if (animPhase === 'sliding') {
+        animProgress = Math.min(elapsed / slideDuration, 1);
+        drawScene();
+        if (animProgress >= 1) {
+          animPhase = 'flying'; animProgress = 0; lastTimestamp = timestamp;
+        }
+      } else if (animPhase === 'flying') {
+        animProgress = Math.min(elapsed / flyDuration, 1);
+        drawScene();
+        if (animProgress >= 1) {
+          animPhase = 'done'; animProgress = 1; drawScene(); return;
+        }
+      }
+      animationId = requestAnimationFrame(step);
+    }
+    animationId = requestAnimationFrame(step);
+  }
+
+  function redrawStatic() {
+    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+    animPhase = 'idle'; animProgress = 0;
+    computeTrajectory();
+    drawScene();
+  }
+
+  [heightSlider, angleSlider].forEach(s => s.addEventListener('input', redrawStatic));
+  dragToggle.addEventListener('change', redrawStatic);
+
+  canvas.addEventListener('click', () => {
+    if (animPhase === 'sliding' || animPhase === 'flying') return;
+    startAnimation();
+  });
+
+  computeTrajectory();
+  drawScene();
+  setTimeout(() => { startAnimation(); }, 500);
+})();
+</script>
+</body>
+</html>
